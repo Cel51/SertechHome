@@ -1,5 +1,3 @@
-import { useStorage } from "@vueuse/core";
-
 export const categorizedActions = (data) => {
   if(!Array.isArray(data) || data.length == 0) {
     return;

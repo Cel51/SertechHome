@@ -1,45 +1,9 @@
 <script setup lang="ts">
 import { categorizedActions } from './services/actions'
-import { useStorage } from '@vueuse/core';
+import { useStorage } from '@vueuse/core'
 
 const userId = useStorage('userId')
-const actions = useStorage('actions',
-  [],
-  undefined,
-  {
-    serializer: {
-      // The read function converts stored values into the proper object structure.
-      read: (v: any) => {
-        if (!v) return null;
-        
-        // Parse the stored JSON
-        const parsed = JSON.parse(v);
-        
-        // Rebuild the `action` functions from their string representations
-        return parsed.map((item: any) => ({
-          ...item,
-          action: new Function('query', item.action), // Convert the action string back into a function
-        }));
-      },
-      
-      // The write function serializes the action function as a string.
-      write: (v: any) => {
-        if (!v) return null;
-
-
-        console.log(typeof v)
-
-        // Map through the items and store the action as a string
-        const serialized = v.map((item: any) => ({
-          ...item,
-          action: item.action.toString(), // Serialize the function to a string
-        }));
-
-        return JSON.stringify(serialized); // Serialize the entire array
-      }
-    },
-  }
-);
+const actions = useStorage('actions', {});
 
 const input = ref(null)
 const query = ref()
@@ -54,7 +18,7 @@ const defineShortcode = () => {
   const queryFirstParameters = Array.isArray(query.value.match(regex)) ? query.value.match(regex)[0] : null
 
   if (queryFirstParameters) {
-    currentAction.value = actions.find((elem) => {
+    currentAction.value = parsedActions.value.find((elem) => {
       return elem.sc === queryFirstParameters
     })
   } else {
@@ -67,17 +31,49 @@ const handleAction = () => {
     // remove currentAction.sc with space before passing it to the action
     const regex = new RegExp(`${currentAction.value.sc}\\s`)
     const valueToPass = query.value.replace(regex, '')
-    currentAction.value.action(valueToPass);
+
+    console.log(currentAction.value.action)
+
+    currentAction.value.action(valueToPass, userId.value);
+
   } else {
     window.location = `https://www.google.com/search?q=${encodeURIComponent(query.value)}`
   }
 }
 
-// Example usage with your original `actions` array:
+const parsedActions = computed(() => {
+  try {
+    // Parse the actions from storage
+    const actions = JSON.parse(JSON.parse(useStorage('actions').value)).actions;
 
-const transformedActions = reactive(() => {
-  return categorizedActions(actions.value);
+    // Recreate the actions with the stringified function
+    return actions.map((item: any) => {
+      try {
+        // Check if item.action is a string and try to create a function from it
+        const actionFunction = new Function('query', item.action); // 'query' is the function argument
+
+        return {
+          ...item,
+          action: actionFunction, // Assign the newly created function
+        };
+      } catch (e) {
+        console.error('Error creating function from action string:', item.action, e);
+        return {
+          ...item,
+          action: () => { console.error('Invalid action function body'); }, // Fallback function
+        };
+      }
+    });
+  } catch (e) {
+    console.error('Error parsing actions from storage:', e);
+    return [];
+  }
+});
+
+const transformedActions = computed(() => {
+  return categorizedActions(parsedActions.value);
 })
+
 
 onMounted(() => {
   input.value.input.focus()
@@ -89,12 +85,8 @@ onMounted(() => {
   <div class="p-8 space-y-8 mb-8">
 
     <div class="text-3xl">
-      Sertech Home
+      Home
     </div>
-
-    <pre>
-      {{ actions }}
-    </pre>
 
     <UInput ref="input" v-model="query" @keyup="defineShortcode" @keyup.enter="handleAction">
       <template v-if="currentAction" #trailing>
