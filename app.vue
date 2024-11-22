@@ -34,6 +34,8 @@ const handleAction = () => {
 
     console.log(currentAction.value.action)
 
+    console.log(userId.value)
+
     currentAction.value.action(valueToPass, userId.value);
 
   } else {
@@ -50,7 +52,7 @@ const parsedActions = computed(() => {
     return actions.map((item: any) => {
       try {
         // Check if item.action is a string and try to create a function from it
-        const actionFunction = new Function('query', item.action); // 'query' is the function argument
+        const actionFunction = new Function('query', 'userId', item.action); // 'query' is the function argument
 
         return {
           ...item,
