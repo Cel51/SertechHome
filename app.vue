@@ -130,7 +130,7 @@ onMounted(() => {
     </div>
   </div>
 
-  <div class="fixed bottom-0 bg-gray-950 w-full p-2 flex">
+  <div class="fixed bottom-0 bg-gray-950 w-full p-2 flex gap-2">
     <div class="flex gap-2 items-center">
       <div>User Id:</div>
       <UInput type="text" v-model="userId"></UInput>
